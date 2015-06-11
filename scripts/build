@@ -32,6 +32,7 @@ var fileList = [
   'editors/nestedmodel.js',
   'editors/date.js',
   'editors/datetime.js',
+  'editors/typeahead.js',
 ];
 
 //Concatenate the main files

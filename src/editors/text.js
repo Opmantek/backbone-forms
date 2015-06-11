@@ -54,12 +54,12 @@ Form.editors.Text = Form.Editor.extend({
   },
 
   determineChange: function(event) {
-    var currentValue = this.$el.val();
+    var currentValue = this.getValue();
     var changed = (currentValue !== this.previousValue);
 
     if (changed) {
       this.previousValue = currentValue;
-
+      this.value = currentValue;
       this.trigger('change', this);
     }
   },

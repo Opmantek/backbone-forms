@@ -1328,12 +1328,12 @@ Form.editors.Text = Form.Editor.extend({
   },
 
   determineChange: function(event) {
-    var currentValue = this.$el.val();
+    var currentValue = this.getValue();
     var changed = (currentValue !== this.previousValue);
 
     if (changed) {
       this.previousValue = currentValue;
-
+      this.value = currentValue;
       this.trigger('change', this);
     }
   },
@@ -1351,6 +1351,7 @@ Form.editors.Text = Form.Editor.extend({
    * @param {String}
    */
   setValue: function(value) {
+    this.value = value;
     this.$el.val(value);
   },
 
@@ -1478,7 +1479,7 @@ Form.editors.Number = Form.editors.Text.extend({
     })();
 
     if (_.isNaN(value)) value = null;
-
+    this.value = value;
     Form.editors.Text.prototype.setValue.call(this, value);
   }
 
@@ -1557,6 +1558,7 @@ Form.editors.Checkbox = Form.editors.Base.extend({
     }else{
       this.$el.prop('checked', false);
     }
+    this.value = !!value;
   },
 
   focus: function() {
@@ -1725,6 +1727,7 @@ Form.editors.Select = Form.editors.Base.extend({
   },
 
   setValue: function(value) {
+    this.value = value;
     this.$el.val(value);
   },
 
@@ -1856,6 +1859,7 @@ Form.editors.Radio = Form.editors.Select.extend({
   },
 
   setValue: function(value) {
+    this.value = value;
     this.$('input[type=radio]').val([value]);
   },
 
@@ -1968,6 +1972,7 @@ Form.editors.Checkboxes = Form.editors.Select.extend({
 
   setValue: function(values) {
     if (!_.isArray(values)) values = [values];
+    this.value = values;
     this.$('input[type=checkbox]').val(values);
   },
 
@@ -2328,6 +2333,7 @@ Form.editors.Date = Form.editors.Base.extend({
    * @param {Date} date
    */
   setValue: function(date) {
+    this.value = date;
     this.$date.val(date.getDate());
     this.$month.val(date.getMonth());
     this.$year.val(date.getFullYear());
@@ -2495,7 +2501,7 @@ Form.editors.DateTime = Form.editors.Base.extend({
    */
   setValue: function(date) {
     if (!_.isDate(date)) date = new Date(date);
-
+    this.value = date;
     this.dateEditor.setValue(date);
 
     this.$hour.val(date.getHours());
@@ -2549,6 +2555,63 @@ Form.editors.DateTime = Form.editors.Base.extend({
 
   //The date editor to use (constructor function, not instance)
   DateEditor: Form.editors.Date
+});
+
+/**
+ * Text
+ * 
+ * Text input with focus, blur and change events
+ */
+Form.editors.Typeahead = Form.editors.Text.extend({
+
+  events: {    
+    'typeahead:select': function(event) {
+      if( this.selectedValue !== this.getValue() ) {
+        this.selectedValue = this.getValue();
+        console.log("typeahead:select selectedValue: ",this.selectedValue);  
+        this.trigger("change", this);
+      }      
+    },
+    'typeahead:change': function(event) {
+      if( this.selectedValue !== this.getValue() ) {
+        this.selectedValue = this.getValue();
+        console.log("typeahead:change selectedValue: ",this.selectedValue);
+        this.trigger("change", this);
+      } 
+    },
+    'select':   function(event) {
+      this.trigger('select', this);
+    },
+    'focus':    function(event) {
+      this.trigger('focus', this);
+    },
+    'blur':     function(event) {
+      this.trigger('blur', this);
+    }
+  },
+
+  /**
+   * Returns the current editor value
+   * @return {String}
+   */
+  getValue: function() {
+    return this.$el.typeahead('val');
+  },
+
+  /**
+   * Sets the value of the form element
+   * use parents set if we have not been instantiated as a typeahead yet
+   * @param {String}
+   */
+  setValue: function(value) {
+    this.value = value;
+    if( this.$el.data("typeahead") !== undefined) {
+      this.$el.typeahead('val', value);
+    }
+    else {
+      Form.editors.Text.prototype.setValue.apply(this,arguments);
+    }
+  }
 });
 
 
