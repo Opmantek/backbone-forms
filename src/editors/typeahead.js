@@ -72,7 +72,7 @@ Form.editors.Typeahead = Form.editors.Text.extend({
    * Cleans up the typeahead and then lets the normal clean up happen   
    */
   remove: function() {
-    $("#"+self.id).typeahead('destroy');
+    this.$el.typeahead('destroy');
     Form.editors.Text.prototype.remove.apply(this,arguments);
   },
   
@@ -81,11 +81,13 @@ Form.editors.Typeahead = Form.editors.Text.extend({
    * Should be called after $el has made it into the DOM   
    */
   initialiseTypeAhead: function() {
-    if( this.typeaheadInitialised )
-      return;
-    console.log("Typeahead::initialiseTypeAhead running "+this.id);
-    this.typeaheadInitialised = true;
     var $typeahead = this.$el;
+    // if already created then destroy and recreate
+    // needed for some forms that re-render
+    if( this.typeaheadInitialised )
+      $typeahead.typeahead('destroy');
+    this.typeaheadInitialised = true;
+    
     if( $typeahead.data("prefetchList") !== undefined) {
       var prefetchList = $typeahead.data("prefetchList");
       var resources = this.getBloodhoundPrefetchConfig( prefetchList );  

@@ -2590,9 +2590,6 @@ Form.editors.Typeahead = Form.editors.Text.extend({
         this.trigger("change", this);
       } 
     },
-    'typeahead:open': function(event) {
-      console.log("OPEN");
-    },
     'select':   function(event) {
       this.trigger('select', this);
     },
@@ -2611,20 +2608,12 @@ Form.editors.Typeahead = Form.editors.Text.extend({
   /**
    * Adds the editor to the DOM
    * NOTE: afaict the element needs to be in the dom before typeahead init, which it isn't
-   #       so there is a timeout below which intialises after the render should be complete (a guesstimate)
+   #       so the user is in charge of calling initialiseTypeahead below when it is in the DOM
    */
   render: function() {
     this.setValue(this.value);
 
     var self = this;
-    // if( !this.typeaheadInitialised ) {
-    //   this.typeaheadInitialised = true;
-    //   setTimeout(function() {
-    //     // hunt for ourselves and initialise
-    //     console.log("Typeahead::render initialiseTypeAhead " + self.id);
-    //     self.initialiseTypeAhead( $("#"+self.id) ); 
-    //   }, 1000);
-    // }
     return this;
   },  
   /**
@@ -2649,20 +2638,26 @@ Form.editors.Typeahead = Form.editors.Text.extend({
       Form.editors.Text.prototype.setValue.apply(this,arguments);
     }
   },
+  /**
+   * Cleans up the typeahead and then lets the normal clean up happen   
+   */
   remove: function() {
-    console.log("Typeahead::remove destroy typeahead");
-    $("#"+self.id).typeahead('destroy');
+    this.$el.typeahead('destroy');
     Form.editors.Text.prototype.remove.apply(this,arguments);
   },
-
-  // typeahead init code
-  // taken from opCommon
+  
+  /**
+   * Initialises the typeahead object
+   * Should be called after $el has made it into the DOM   
+   */
   initialiseTypeAhead: function() {
-    if( this.typeaheadInitialised )
-      return;
-    console.log("Typeahead::initialiseTypeAhead running "+this.id);
-    this.typeaheadInitialised = true;
     var $typeahead = this.$el;
+    // if already created then destroy and recreate
+    // needed for some forms that re-render
+    if( this.typeaheadInitialised )
+      $typeahead.typeahead('destroy');
+    this.typeaheadInitialised = true;
+    
     if( $typeahead.data("prefetchList") !== undefined) {
       var prefetchList = $typeahead.data("prefetchList");
       var resources = this.getBloodhoundPrefetchConfig( prefetchList );  
