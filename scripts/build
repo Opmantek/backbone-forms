@@ -41,13 +41,16 @@ var mainContents = builder(sourceDir)
   .getContent();
 
 //Save regular dev and mini versions
+try {
 builder(baseDir)
   .setContent(mainContents)
   .wrap('scripts/build-templates/main.js', templateData)
   .save('distribution/backbone-forms.js')
   .uglify()
   .save('distribution/backbone-forms.min.js');
-
+} catch (e) {
+  console.log("error",e);
+}
 //Main AMD file (for RequireJS)
 builder(baseDir)
   .setContent(mainContents)

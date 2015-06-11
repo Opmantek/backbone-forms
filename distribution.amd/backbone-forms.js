@@ -2558,26 +2558,29 @@ Form.editors.DateTime = Form.editors.Base.extend({
 });
 
 /**
- * Text
+ * Typeahead
  * 
- * Text input with focus, blur and change events
+ * Typeahead input, signals change when value is selected or typed in and tabbed out
  */
 Form.editors.Typeahead = Form.editors.Text.extend({
 
   events: {    
+    // only trigger change after the user has typed in and left (typeahead:change)
+    // or has made a selection (in which case don't trigger when they leave)
     'typeahead:select': function(event) {
       if( this.selectedValue !== this.getValue() ) {
         this.selectedValue = this.getValue();
-        console.log("typeahead:select selectedValue: ",this.selectedValue);  
         this.trigger("change", this);
       }      
     },
     'typeahead:change': function(event) {
       if( this.selectedValue !== this.getValue() ) {
         this.selectedValue = this.getValue();
-        console.log("typeahead:change selectedValue: ",this.selectedValue);
         this.trigger("change", this);
       } 
+    },
+    'typeahead:open': function(event) {
+      console.log("OPEN");
     },
     'select':   function(event) {
       this.trigger('select', this);
@@ -2589,7 +2592,30 @@ Form.editors.Typeahead = Form.editors.Text.extend({
       this.trigger('blur', this);
     }
   },
+  initialize: function(options) {
+    Form.editors.Text.prototype.initialize.call(this, options);
+    this.typeaheadInitialised = false;
+  },
 
+  /**
+   * Adds the editor to the DOM
+   * NOTE: afaict the element needs to be in the dom before typeahead init, which it isn't
+   #       so there is a timeout below which intialises after the render should be complete (a guesstimate)
+   */
+  render: function() {
+    this.setValue(this.value);
+
+    var self = this;
+    // if( !this.typeaheadInitialised ) {
+    //   this.typeaheadInitialised = true;
+    //   setTimeout(function() {
+    //     // hunt for ourselves and initialise
+    //     console.log("Typeahead::render initialiseTypeAhead " + self.id);
+    //     self.initialiseTypeAhead( $("#"+self.id) ); 
+    //   }, 1000);
+    // }
+    return this;
+  },  
   /**
    * Returns the current editor value
    * @return {String}
@@ -2611,6 +2637,111 @@ Form.editors.Typeahead = Form.editors.Text.extend({
     else {
       Form.editors.Text.prototype.setValue.apply(this,arguments);
     }
+  },
+  remove: function() {
+    console.log("Typeahead::remove destroy typeahead");
+    $("#"+self.id).typeahead('destroy');
+    Form.editors.Text.prototype.remove.apply(this,arguments);
+  },
+
+  // typeahead init code
+  // taken from opCommon
+  initialiseTypeAhead: function() {
+    if( this.typeaheadInitialised )
+      return;
+    console.log("Typeahead::initialiseTypeAhead running "+this.id);
+    this.typeaheadInitialised = true;
+    var $typeahead = this.$el;
+    if( $typeahead.data("prefetchList") !== undefined) {
+      var prefetchList = $typeahead.data("prefetchList");
+      var resources = this.getBloodhoundPrefetchConfig( prefetchList );  
+    }
+    else if( $typeahead.data("local") !== undefined ) {
+      var local = $typeahead.data("local");
+      var resources = this.getBloodhoundDataConfig( local );
+    }
+    else if( $typeahead.data("remote" !== undefined ) ) {
+      var remote = $typeahead.data("remote");
+      var resources = this.getBloodhoundRemoteConfig( remote );
+    }
+    var options  = [];
+    for (var index in resources) {
+      resource = resources[index];
+      option = {
+        name: resource.name, 
+        displayKey: 'name',
+        source: resource.engine,        
+      }
+      
+      if( resources.length > 1 ) {
+        option["templates"] = { header: '<h4 class="resource-header">'+resource.name+'</h4>' };
+      }
+      options.push(option);
+    }
+
+    var new_typeahead = $typeahead.typeahead({
+        highlight: false,
+        hint: true
+      },
+      options
+    );
+
+    $typeahead.data( "typeahead", new_typeahead );
+    return new_typeahead;
+  },
+  getBloodhoundPrefetchConfig: function( data ) {
+    var resources = new Array();
+    for( i = 0; i < data.length; i++ ) {
+        var engine = new Bloodhound({
+          name: data[i].value,
+          prefetch: {
+            url: data[i].url,
+            ttl: 0, // in milliseconds,         
+          },
+          datumTokenizer: function(d) {
+            return d.tokens;
+          },
+          queryTokenizer: Bloodhound.tokenizers.whitespace,
+        });
+        engine.initialize();
+        // typeahead doesn't allow dataset names with any chars except the ones listed below
+        // fixme: update this and initialiseTypeAhead above to pass through and use the unmodified group name for displaying stuff
+        data[i].value = data[i].value.replace( /[^a-zA-Z0-9_-]+/g, '_');
+      resources.push( { engine: engine.ttAdapter(), name: data[i].value } );
+    }
+    return resources;
+  },
+  getBloodhoundDataConfig: function( data ) {
+    var resources = new Array();
+    
+    var engine = new Bloodhound({   
+      name: "data",
+      local: data.datum,
+      datumTokenizer: function(d) {
+        return d.name
+      },
+      queryTokenizer: Bloodhound.tokenizers.whitespace,
+    });
+    engine.initialize();
+    resources.push( { engine: engine.ttAdapter(), name: data.header } );
+
+    return resources;
+  },
+  getBloodhoundRemoteConfig: function( data ) {
+    var resources = new Array();
+    
+    var engine = new Bloodhound({   
+      name: "data",
+      remote: { url: data.url, wildcard: data.wildcard },
+      datumTokenizer: function(d) {
+        return d.name
+      },
+      queryTokenizer: Bloodhound.tokenizers.whitespace,
+    });
+    engine.initialize();
+    resources.push( { engine: engine.ttAdapter(), name: data.header } );
+
+    return resources;
   }
 });
 
